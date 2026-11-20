@@ -36,7 +36,11 @@ from .util import (
 
 from .config import ENCODING_DICT, Task_list
 from .transcription_progress import TranscriptionProgressTracker, probe_media_duration
-from .transcribe_compat import compatible_transcribe_kwargs, compatible_vad_parameters
+from .transcribe_compat import (
+    compatible_transcribe_kwargs,
+    compatible_vad_parameters,
+    ensure_ctranslate2_float32_features,
+)
 
 
 class AudioStreamTranscribeWorker(QThread):
@@ -442,6 +446,8 @@ class TranscribeWorker(QThread):
         self.is_running = True
         self.was_cancelled = False
         self.outcome = None
+        # Install before any worker thread encodes audio. Idempotent.
+        ensure_ctranslate2_float32_features()
 
         # 检查临时目录
         if not(os.path.exists(r"./temp")):
