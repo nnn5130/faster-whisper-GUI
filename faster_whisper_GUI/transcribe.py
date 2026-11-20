@@ -36,7 +36,7 @@ from .util import (
 
 from .config import ENCODING_DICT, Task_list
 from .transcription_progress import TranscriptionProgressTracker, probe_media_duration
-from .transcribe_compat import compatible_transcribe_kwargs
+from .transcribe_compat import compatible_transcribe_kwargs, compatible_vad_parameters
 
 
 class AudioStreamTranscribeWorker(QThread):
@@ -267,6 +267,12 @@ class TranscribeWorker(QThread):
         self.outcome = self.progress.snapshot()["state"]
         self._emit_progress(force=True)
 
+    def _vad_parameters_for_installed_whisper(self):
+        vad_parameters, notes = compatible_vad_parameters(self.vad_parameters)
+        if notes:
+            print("adjust vad options for this faster-whisper: " + ", ".join(notes))
+        return vad_parameters
+
     def _fail_file(self, file) -> None:
         if self.progress is not None:
             self.progress.fail_file(file)
@@ -327,7 +333,7 @@ class TranscribeWorker(QThread):
                                                 "language_detection_threshold": self.parameters["language_detection_threshold"],
                                                 "language_detection_segments": self.parameters["language_detection_segments"],
                                                 "vad_filter": self.vad_filter,
-                                                "vad_parameters": self.vad_parameters,
+                                                "vad_parameters": self._vad_parameters_for_installed_whisper(),
                                             }
             transcribe_options, dropped = compatible_transcribe_kwargs(
                 self.model.transcribe,
