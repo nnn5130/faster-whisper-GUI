@@ -32,13 +32,13 @@ class HomePageNavigationinterface(NavigationBaseInterface):
         self.hBoxLayout.setAnimation(250, QEasingCurve.OutQuad)
         self.addLayout(self.hBoxLayout)
     
-        self.itemLabel_demucs = ItemLabel(  self,
-                                            self.tr("Demucs"), 
-                                            self.tr("自动人声提取")
+        self.itemLabel_bandit = ItemLabel(  self,
+                                            self.tr("BandIt Plus"),
+                                            self.tr("对白、音乐、效果分离")
                                         )
         
-        self.hBoxLayout.addWidget(self.itemLabel_demucs)#, 3, alignment=Qt.AlignmentFlag.AlignLeft)
-        self.itemLabel_demucs.setMainButton(self.tr("进入"))
+        self.hBoxLayout.addWidget(self.itemLabel_bandit)#, 3, alignment=Qt.AlignmentFlag.AlignLeft)
+        self.itemLabel_bandit.setMainButton(self.tr("进入"))
         
         # image = QImage(FasterWhisperGUIIcon.DEMUCS.png())
         # self.itemLabel_demucs.imageLabel.setImage(image)

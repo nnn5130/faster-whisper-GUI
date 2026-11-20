@@ -1,9 +1,9 @@
 {
     "theme": "light",
-    "demucs": {
+    "bandit": {
         "overlap": 0.1,
         "segment": 7.8,
-        "tracks": 5
+        "tracks": 4
     },
     "model_param": {
         "localModel": true,

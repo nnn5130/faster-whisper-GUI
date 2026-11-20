@@ -18,7 +18,8 @@ class StyleSheet(StyleSheetBase, Enum):
     TAB_INTERFSCE = "tabInterface"
     FILE_LIST = "fileListWidget"
     HOME_ITEM = "homeItemLabel"
-    DENUCE_INTERFACE = "demucsInterface"
+    # qss file name is unchanged so the compiled resource path still matches.
+    BANDIT_INTERFACE = "demucsInterface"
     OUTPUT_GROUP_WIDGET = "outputGroupWidget"
     PROCESS_INTERFACE = "processPageInterface"
     TRANSCRIBEPARAMITEMWIDGET = "TranscribeParamItemWidget"

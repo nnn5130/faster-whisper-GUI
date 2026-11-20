@@ -22,11 +22,10 @@
   - [faster-whisper](https://github.com/guillaumekln/faster-whisper)
   - [whisperX](https://github.com/m-bain/whisperX)
   - [HuggingFace models download](https://huggingface.co/models)
-  - [Demucs](https://github.com/facebookresearch/demucs)
-  - more and better AVE ：
+  - [BandIt Plus](https://github.com/kwatcharasupat/bandit) — cinematic dialogue / music / effects separation
+  - more and better separation tools:
 
     - [UVR](https://github.com/Anjok07/ultimatevocalremovergui#installation)
-    - [Demucs-Gui](https://github.com/CarlGao4/Demucs-Gui)
   
 - ## What's this
 
@@ -34,8 +33,30 @@
     - Transcrib audio or video files to srt/txt/smi/vtt/lrc file
     - provide all paraments of VAD-model and whisper-model
     - now, it support whisperX
-    - Demucs model support
+    - BandIt Plus cinematic source separation (dialogue / music / effects)
     - whisper large-v3 model support
+
+- ## Install
+
+  Python 3.10 or 3.11. On Windows with an RTX 4070 (12GB), install the CUDA 12.1 PyTorch build. The old `torch==1.13.1+cu117` pin does not include Ada (sm_89) kernels, so that GPU will not run it.
+
+  ```bash
+  pip install -r requirements.txt
+  ```
+
+  `requirements.txt` pulls `torch==2.1.2+cu121` and `torchaudio==2.1.2+cu121` from the official PyTorch index, and keeps NumPy on 1.x because that PyTorch build does not support NumPy 2. You need an NVIDIA driver that supports CUDA 12.1 (driver 530 or newer). BandIt Plus uses CUDA when `torch.cuda.is_available()` is true and otherwise runs on CPU with the same install.
+
+  A machine without an NVIDIA GPU can install the smaller CPU wheels instead of the lines in `requirements.txt`:
+
+  ```bash
+  pip install torch==2.1.2 torchaudio==2.1.2 --index-url https://download.pytorch.org/whl/cpu
+  ```
+
+  Then install the other packages from `requirements.txt` without reinstalling torch. The CUDA wheel is the one the GUI is tested against, and it already falls back to CPU when no GPU is present.
+
+  The first separation downloads the official BandIt Plus checkpoint (about 450MB) to `./cache/dnr-3s-mus64-l1snr-plus.ckpt`. That file is `dnr-3s-mus64-l1snr-plus.ckpt` from [Zenodo 10160601](https://zenodo.org/records/10160601). To use a copy you already have, put it at that path or set `BANDIT_PLUS_CHECKPOINT` to the file.
+
+  Output stems are speech (dialogue), music, and effects. The default choice writes dialogue only, which replaces the old vocals-only option. "Dialogue and background" writes speech and everything else (music + effects). Segment length defaults to 6 seconds, the length the model was trained on. On a 12GB RTX 4070, 6–10 seconds is a comfortable range; longer chunks use more VRAM. Overlap is the fraction of each chunk that is crossfaded into the next (maximum 0.5).
 
 ---
 
@@ -80,9 +101,12 @@
 - ### Large-v3 模型支持
 
   ![image-20231118155209847](./README.assets/image-20231118155209847.png)
-- ### Demucs AVE
+- ### BandIt Plus cinematic separation
 
-  ![DemucsFunction](./README.assets/DemucsFunction.png)
+  Dialogue, music, and effects. The page still takes a file list, segment length, overlap, and an output directory. The screenshot below is the previous separation page; the stem list is now dialogue / music / effects.
+
+  ![BandIt Plus separation page](./README.assets/DemucsFunction.png)
+
 - ### batch process
 
 ![image-20231008150849827](./README.assets/image-20231008150849827.png)

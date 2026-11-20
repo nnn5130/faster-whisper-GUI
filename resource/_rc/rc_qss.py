@@ -7,8 +7,8 @@ from PySide6 import QtCore
 
 qt_resource_data = b"\
 \x00\x00\x00l\
-D\
-emucsParamGroupW\
+B\
+anditParamGroupW\
 idget > #mainObj\
 ect{\x0d\x0a    backgr\
 ound-color: rgb(\
@@ -16,8 +16,8 @@ ound-color: rgb(\
   border-radius:\
  10px;\x0d\x0a}\x0d\x0a\
 \x00\x00\x00b\
-D\
-emucsParamGroupW\
+B\
+anditParamGroupW\
 idget > #mainObj\
 ect{\x0d\x0a    backgr\
 ound-color: whit\

@@ -164,14 +164,33 @@ CAPTURE_PARA = [
     }
 ]
 
+# BandIt Plus cinematic stems. Index 1 is the default and replaces the
+# old "vocals only" choice. The last index writes speech against the
+# rest of the mix (music + effects).
 STEMS = [
-            "All Stems", 
-            "Vocals", 
-            "Other",
-            "Bass", 
-            "Drums", 
-            "Vocals and Others dichotomy"
+            "All Stems",
+            "Speech",
+            "Music",
+            "Effects",
+            "Speech and Background dichotomy",
         ]
+
+
+def normalize_bandit_track_index(tracks) -> int:
+    """Map a saved stem index onto ``STEMS``.
+
+    Demucs configs used index 5 for the vocals/background split. Anything
+    else outside the new list falls back to dialogue only.
+    """
+    try:
+        tracks = int(tracks)
+    except (TypeError, ValueError):
+        return 1
+    if tracks == 5:
+        return len(STEMS) - 1
+    if tracks < 0 or tracks >= len(STEMS):
+        return 1
+    return tracks
 
 ENCODING_DICT = {"UTF-8":"utf8", 
                     "UTF-8 BOM":"utf_8_sig", 

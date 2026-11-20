@@ -8,7 +8,18 @@ nltk
 CTranslate2>=3.21.0
 joblib==1.2.0
 pyside6 > 6.5.0
-torch==1.13.1+cu117
-torchaudio==0.13.1+cu117
+# BandIt Plus was written for PyTorch 2.0. The cu117 wheels pinned before
+# do not ship RTX 40-series (sm_89) kernels, so an RTX 4070 cannot run them.
+# 2.1.2+cu121 is the build used here: new enough for Ada, still in the
+# 2.0/2.1 generation the model was trained with. The same wheel falls back
+# to CPU when CUDA is unavailable.
+# CPU-only alternative:
+#   pip install torch==2.1.2 torchaudio==2.1.2 --index-url https://download.pytorch.org/whl/cpu
+--extra-index-url https://download.pytorch.org/whl/cu121
+torch==2.1.2+cu121
+torchaudio==2.1.2+cu121
+soundfile
+# torch 2.1.2 was built against NumPy 1.x
+numpy<2
 webvtt
 
