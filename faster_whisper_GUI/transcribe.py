@@ -4,6 +4,7 @@
 from concurrent import futures
 import os
 from typing import List
+import threading
 import time
 import codecs
 import torch
@@ -34,6 +35,7 @@ from .util import (
                 )
 
 from .config import ENCODING_DICT, Task_list
+from .transcription_progress import TranscriptionProgressTracker, probe_media_duration
 
 
 class AudioStreamTranscribeWorker(QThread):
@@ -194,6 +196,8 @@ class OutputWorker(QThread):
 
 class TranscribeWorker(QThread):
     signal_process_over = Signal(list)
+    # Snapshot from TranscriptionProgressTracker. Emitted from worker threads.
+    signal_progress = Signal(dict)
 
     def __init__(self
                 ,parent=None
@@ -207,6 +211,8 @@ class TranscribeWorker(QThread):
         super().__init__(parent)
 
         self.is_running = False
+        self.was_cancelled = False
+        self.outcome = None
         self.model = model
         self.parameters = parameters
         self.vad_filter = vad_filter
@@ -214,8 +220,57 @@ class TranscribeWorker(QThread):
         self.num_workers = num_workers
 
         self.segments_path_info = []
-        
-        
+        self.progress = None
+        self._last_progress_emit = 0.0
+        self._emit_lock = threading.Lock()
+
+    def _emit_progress(self, force: bool = False) -> None:
+        if self.progress is None:
+            return
+        with self._emit_lock:
+            now = time.monotonic()
+            if not force and (now - self._last_progress_emit) < 0.1:
+                return
+            snapshot = self.progress.snapshot()
+            self._last_progress_emit = now
+        self.signal_progress.emit(snapshot)
+
+    def _open_progress(self, files) -> None:
+        durations = []
+        for file in files:
+            try:
+                durations.append(probe_media_duration(file))
+            except Exception:
+                durations.append(None)
+            if not self.is_running:
+                break
+        self.progress = TranscriptionProgressTracker(
+            files,
+            durations,
+            clip_timestamps=self.parameters.get("clip_timestamps", "0") if self.parameters else "0",
+        )
+        self.progress.start()
+        self._emit_progress(force=True)
+
+    def _finish_progress(self, how: str) -> None:
+        if self.progress is None:
+            self.outcome = how
+            return
+        if how == "cancelled":
+            self.was_cancelled = True
+            self.progress.cancel()
+        elif how == "error":
+            self.progress.fail_run()
+        else:
+            self.progress.finish()
+        self.outcome = self.progress.snapshot()["state"]
+        self._emit_progress(force=True)
+
+    def _fail_file(self, file) -> None:
+        if self.progress is not None:
+            self.progress.fail_file(file)
+            self._emit_progress(force=True)
+
     def transcribe_file(self, file) -> (TranscriptionInfo, List): # type: ignore
         # try:
         #     is_av_file = self.try_decode_avFile(file)
@@ -227,8 +282,16 @@ class TranscribeWorker(QThread):
         #     print(f"    ignore File : {file} \n")
         #     return (None, None)
 
+        if not self.is_running:
+            return None, None
+
+        if self.progress is not None:
+            self.progress.begin_file(file)
+            self._emit_progress(force=True)
+
         print("开始处理音频...")
-        segments, info = self.model.transcribe(
+        try:
+            segments, info = self.model.transcribe(
                                                 audio=file,
                                                 language=self.parameters["language"],
                                                 task=Task_list[int(self.parameters["task"])],
@@ -265,12 +328,26 @@ class TranscribeWorker(QThread):
                                                 vad_filter=self.vad_filter,
                                                 vad_parameters=self.vad_parameters
                                             )
+        except Exception as exc:
+            print(f"{file} 处理失败!")
+            print(str(exc))
+            self._fail_file(file)
+            return (None, None)
+
+        if self.progress is not None:
+            self.progress.set_media_duration(
+                file,
+                getattr(info, "duration", None),
+                getattr(info, "duration_after_vad", None),
+            )
+            self._emit_progress(force=True)
         
         try:
             self.detect_Audio_info(info)
         except Exception as e:
             print(f"{file} 处理失败!")
             print(str(e))
+            self._fail_file(file)
             return (None, None)
 
         # segments = list(segments)
@@ -278,20 +355,33 @@ class TranscribeWorker(QThread):
         # 遍历生成器，并获取转写内容
         print(f"Transcription for {file.split('/')[-1]}")
 
-        for segment in segments:
-            # 退出进程标识
-            # print(self.is_running)
-            if not self.is_running:
-                # self.signal_process_over.emit(self.segments_path_info)
-                return info, None
+        try:
+            for segment in segments:
+                # 退出进程标识
+                # print(self.is_running)
+                if not self.is_running:
+                    # self.signal_process_over.emit(self.segments_path_info)
+                    return info, None
 
-            print(
-                    f'  [{str(round(segment.start, 5))}s --> {str(round(segment.end, 5))}s] {segment.text.lstrip()}'
-                )
-            segmentsTranscribe.append(segment_Transcribe(segment))#.start, segment.end, segment.text))
+                print(
+                        f'  [{str(round(segment.start, 5))}s --> {str(round(segment.end, 5))}s] {segment.text.lstrip()}'
+                    )
+                segmentsTranscribe.append(segment_Transcribe(segment))#.start, segment.end, segment.text))
+                end = getattr(segment, "end", None)
+                if end is not None and self.progress is not None:
+                    self.progress.update_file(file, end)
+                    self._emit_progress()
+        except Exception as exc:
+            print(f"{file} 处理失败!")
+            print(str(exc))
+            self._fail_file(file)
+            return (None, None)
 
         # if not self.is_running:
         #     self.signal_process_over.emit()
+        if self.progress is not None:
+            self.progress.complete_file(file)
+            self._emit_progress(force=True)
         return info, segmentsTranscribe
 
     def detect_Audio_info(self, info):
@@ -336,6 +426,8 @@ class TranscribeWorker(QThread):
     
     def run(self) -> None:
         self.is_running = True
+        self.was_cancelled = False
+        self.outcome = None
 
         # 检查临时目录
         if not(os.path.exists(r"./temp")):
@@ -348,54 +440,79 @@ class TranscribeWorker(QThread):
         num_workers = self.num_workers
 
         files = parameters["audio"]
+        if isinstance(files, str):
+            files = [files]
 
         # 忽略掉输入文件中可能存在的所有的字幕文件
-        files = [file for file in files if file.split(".")[-1].upper() not in SUBTITLE_FORMAT]
-        if ingnore_files := [
-            file
-            for file in files
-            if file.split(".")[-1].upper() in SUBTITLE_FORMAT
-        ]:
+        subtitle_suffixes = {ext.upper() for ext in SUBTITLE_FORMAT}
+        ignored_files = [file for file in files if file.split(".")[-1].upper() in subtitle_suffixes]
+        files = [file for file in files if file.split(".")[-1].upper() not in subtitle_suffixes]
+        if ignored_files:
             new_line = "\n              "
-            print(f"ignore files: {new_line.join(ingnore_files)}")
+            print(f"ignore files: {new_line.join(ignored_files)}")
 
         self.segments_path_info = []
+        if not files:
+            print("No audio files to transcribe")
+            self._finish_progress("error")
+            self.signal_process_over.emit(self.segments_path_info)
+            return
+
+        self._open_progress(files)
+        if not self.is_running:
+            self._finish_progress("cancelled")
+            self.signal_process_over.emit(self.segments_path_info)
+            return
         # 在线程池中并发执行相关任务，默认状况下使用单 GPU 该并发线程数为 1 ，
         # 提高线程数并不能明显增大吞吐量， 且可能因为线程调度的原因反而造成转写时间变长
         # 多 GPU 或多核心 CPU 可通过输入设备号列表并增大并发线程数的方式增加吞吐量，实现多任务并发处理
         # 但会造成内存或显存占用增多
-        with futures.ThreadPoolExecutor(num_workers) as executor:
-            results = executor.map(self.transcribe_file, files)
-            new_line = "\n"
+        try:
+            with futures.ThreadPoolExecutor(num_workers) as executor:
+                mapped = executor.map(self.transcribe_file, files)
 
-            for path, results in zip(files, results):
-                # print(self.is_running)
-                if not self.is_running:
-                    self.signal_process_over.emit(self.segments_path_info)
-                    return
-                
-                (info, segments) = results
+                for path, result in zip(files, mapped):
+                    # print(self.is_running)
+                    if not self.is_running:
+                        self._finish_progress("cancelled")
+                        self.signal_process_over.emit(self.segments_path_info)
+                        return
+                    
+                    (info, segments) = result
 
-                if segments is None:
-                    continue
+                    if segments is None:
+                        continue
 
-                self.segments_path_info.append((segments, path, info))
-                        # print(
-                        #         f"\nTranscription for {path.split('/')[-1]}:\n{new_line.join('[' + str(segment.start) + 's --> ' + str(segment.end) + 's] ' + segment.text for segment in segments)}"
-                        #     )
-                
-                # 保存临时文件
-                temp_output_save_file = getSaveFileName(audioFile=path, format="SRT", rootDir=r"./temp")
-                writeSubtitles(temp_output_save_file, segments=segments, format="SRT",language=info.language, fileName=path)
-                print(f"save temp file: {os.path.abspath(temp_output_save_file)}")
+                    self.segments_path_info.append((segments, path, info))
+                            # print(
+                            #         f"\nTranscription for {path.split('/')[-1]}:\n{new_line.join('[' + str(segment.start) + 's --> ' + str(segment.end) + 's] ' + segment.text for segment in segments)}"
+                            #     )
+                    
+                    # 保存临时文件
+                    temp_output_save_file = getSaveFileName(audioFile=path, format="SRT", rootDir=r"./temp")
+                    writeSubtitles(temp_output_save_file, segments=segments, format="SRT",language=info.language, fileName=path)
+                    print(f"save temp file: {os.path.abspath(temp_output_save_file)}")
+        except Exception as exc:
+            print(f"transcribe failed:\n{exc}")
+            self._finish_progress("error")
+            self.signal_process_over.emit(self.segments_path_info)
+            return
                 
         if torch.cuda.is_available():
             torch.cuda.empty_cache()
             
         print("\n【Over】")
+        if not self.is_running:
+            self._finish_progress("cancelled")
+        else:
+            self._finish_progress("completed")
         self.signal_process_over.emit(self.segments_path_info)
 
         return
+
+    def request_cancel(self):
+        self.was_cancelled = True
+        self.is_running = False
         
     def stop(self):
         self.is_running = False

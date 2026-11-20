@@ -438,10 +438,18 @@ class MainWindows(UIMainWin):
                                                     )
             
             self.transcribe_thread.signal_process_over.connect(self.transcribeOver)
+            self.transcribe_thread.signal_progress.connect(self.onTranscribeProgress)
 
             # 修改按钮 UI
             self.page_process.button_process.setText(self.__tr("取消"))
             self.page_process.button_process.setIcon(r":/resource/Image/Cancel_red.svg")
+
+            audio_files = Transcribe_params["audio"]
+            file_count = len(audio_files) if isinstance(audio_files, (list, tuple)) else 0
+            first_name = ""
+            if file_count:
+                first_name = os.path.basename(str(audio_files[0]).replace("\\", "/"))
+            self.page_process.progressWidget.show_running_placeholder(file_count, first_name)
 
             # 启动进程
             self.log.write(f"start transcribe process\n")
@@ -475,8 +483,9 @@ class MainWindows(UIMainWin):
         
     def cancelTrancribe(self):
         print("Canceling...")
-        self.transcribe_thread.stop()
+        self.transcribe_thread.request_cancel()
         self.transcribe_thread.requestInterruption()
+        self.page_process.progressWidget.mark_cancelled()
         self.raiseErrorInfoBar(title=self.__tr("取消"),content=self.__tr("操作已被用户取消"))
         print("【Process Canceled By User!】")
         self.resetButton_process()
@@ -622,9 +631,27 @@ class MainWindows(UIMainWin):
                                 word = Word(word.start,word.end,new_word,word.probability)
                                 # word.word = new_word
 
+    def onTranscribeProgress(self, snapshot: dict):
+        widget = self.page_process.progressWidget
+        widget.apply_snapshot(snapshot)
+        if snapshot.get("state") == "running" and self.stateTool is not None:
+            self.stateTool.setContent(widget.summary())
+
     def transcribeOver(self, segments_path_info:list):
         # self.button_process.clicked.disconnect(self.cancelTrancribe)
         # self.button_process.clicked.connect(self.onButtonProcessClicked)
+        worker = self.transcribe_thread
+        outcome = None
+        if worker is not None and getattr(worker, "progress", None) is not None:
+            try:
+                outcome = worker.progress.snapshot().get("state")
+            except Exception:
+                outcome = getattr(worker, "outcome", None)
+        elif worker is not None:
+            outcome = getattr(worker, "outcome", None)
+        if worker is not None and getattr(worker, "was_cancelled", False):
+            outcome = "cancelled"
+
         try:
             if self.transcribe_thread and self.transcribe_thread.is_running:
                 self.transcribe_thread.stop()
@@ -633,44 +660,61 @@ class MainWindows(UIMainWin):
         while(self.transcribe_thread and self.transcribe_thread.isRunning()):
             time.sleep(0.3)
 
-        self.setStateTool(text=self.__tr("结束"), status=True)
+        if outcome != "cancelled":
+            self.setStateTool(text=self.__tr("结束"), status=True)
         self.transcribe_thread = None
         self.resetButton_process()
         sys.stdout = self.redirectErrOutpur
 
-        if segments_path_info is not None and len(segments_path_info) > 0:
+        has_results = segments_path_info is not None and len(segments_path_info) > 0
+        if outcome == "cancelled":
+            if has_results:
+                self._publish_transcribe_results(segments_path_info, navigate=False)
+            return
+        if outcome == "error":
+            if has_results:
+                self.raiseErrorInfoBar(self.__tr("转写失败"), self.__tr("部分文件转写失败"))
+                self._publish_transcribe_results(segments_path_info, navigate=False)
+            else:
+                self.raiseErrorInfoBar(self.__tr("转写失败"), self.__tr("转写失败"))
+            return
+
+        if has_results:
             
             self.raiseSuccessInfoBar(
                                 title=self.__tr("成功")
                                 , content=self.__tr("转写完成")
                             )
             
-            self.result_faster_whisper = segments_path_info
-            
-            for segments in self.result_faster_whisper:
-                segment_, path, info = segments
-                if info.language == "zh":
-                    print(path, info.language)
-                    language_param = self.page_transcribes.combox_language.currentText().split("-")[0]
+            self._publish_transcribe_results(segments_path_info, navigate=True)
 
-                    self.simplifiedAndTraditionalChineseConvert(segment_,language_param)
-                    
-            print(f"len_segments_path_info_result: {len(segments_path_info)}")
-            
-            
+    def _publish_transcribe_results(self, segments_path_info: list, navigate: bool):
+        self.result_faster_whisper = segments_path_info
+
+        for segments in self.result_faster_whisper:
+            segment_, path, info = segments
+            if info.language == "zh":
+                print(path, info.language)
+                language_param = self.page_transcribes.combox_language.currentText().split("-")[0]
+
+                self.simplifiedAndTraditionalChineseConvert(segment_,language_param)
+
+        print(f"len_segments_path_info_result: {len(segments_path_info)}")
+
+        if navigate:
             if self.page_setting.combox_autoGoToOutputPage.currentIndex() == 0:
                 self.stackedWidget.setCurrentWidget(self.page_output)
-                
+
             elif self.page_setting.combox_autoGoToOutputPage.currentIndex() == 2:
                 # time.sleep(0.8)
                 mess_ = MessageBox(self.__tr("转写结束"), self.__tr("是否跳转到输出目录？"), self)
                 if mess_.exec():
                     # time.sleep(0.8)
                     self.stackedWidget.setCurrentWidget(self.page_output)
-            
-            # time.sleep(0.8)
-            self.showResultInTable(self.result_faster_whisper)
-            self.current_result = self.result_faster_whisper
+
+        # time.sleep(0.8)
+        self.showResultInTable(self.result_faster_whisper)
+        self.current_result = self.result_faster_whisper
             
             
     def getParamTranscribe(self) -> dict:
