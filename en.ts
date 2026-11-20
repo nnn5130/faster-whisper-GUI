@@ -708,6 +708,16 @@ Longer chunks use more memory. On a 12GB RTX 4070, 6 to 10 seconds is a good ran
         <translation>Over</translation>
     </message>
     <message>
+        <location filename="faster_whisper_GUI/mainWindows.py" line="676"/>
+        <source>部分文件转写失败</source>
+        <translation>Some files failed to transcribe</translation>
+    </message>
+    <message>
+        <location filename="faster_whisper_GUI/mainWindows.py" line="676"/>
+        <source>转写失败</source>
+        <translation>Transcription failed</translation>
+    </message>
+    <message>
         <location filename="faster_whisper_gui/mainWindows.py" line="665"/>
         <source>转写结束</source>
         <translation>transcribe over</translation>
@@ -3170,6 +3180,114 @@ Values other than these may affect model performance!!</translation>
     <message>
         <source>最终的语音块前后都由指定时长的空白填充。</source>
         <translation type="vanished">Final speech chunks are padded by speech_pad_ms each side.</translation>
+    </message>
+</context>
+<context>
+    <name>TranscriptionProgressWidget</name>
+    <message>
+        <location filename="faster_whisper_GUI/transcriptionProgressWidget.py" line="42"/>
+        <source>转写进度</source>
+        <translation>Transcription progress</translation>
+    </message>
+    <message>
+        <location filename="faster_whisper_GUI/transcriptionProgressWidget.py" line="49"/>
+        <source>当前文件进度，以及根据已处理音频估算的剩余时间</source>
+        <translation>Progress for the current file, and a remaining time estimated from audio already processed</translation>
+    </message>
+    <message>
+        <location filename="faster_whisper_GUI/transcriptionProgressWidget.py" line="54"/>
+        <source>等待开始</source>
+        <translation>Waiting to start</translation>
+    </message>
+    <message>
+        <location filename="faster_whisper_GUI/transcriptionProgressWidget.py" line="70"/>
+        <source>尚未开始转写</source>
+        <translation>Transcription has not started</translation>
+    </message>
+    <message>
+        <location filename="faster_whisper_GUI/transcriptionProgressWidget.py" line="163"/>
+        <source>%1/%2 个文件失败</source>
+        <translation>%1 of %2 files failed</translation>
+    </message>
+    <message>
+        <location filename="faster_whisper_GUI/transcriptionProgressWidget.py" line="166"/>
+        <source>已完成 %1/%2 个文件</source>
+        <translation>Finished %1 of %2 files</translation>
+    </message>
+    <message>
+        <location filename="faster_whisper_GUI/transcriptionProgressWidget.py" line="167"/>
+        <source>转写失败</source>
+        <translation>Transcription failed</translation>
+    </message>
+    <message>
+        <location filename="faster_whisper_GUI/transcriptionProgressWidget.py" line="167"/>
+        <source>转写完成</source>
+        <translation>Transcription complete</translation>
+    </message>
+    <message>
+        <location filename="faster_whisper_GUI/transcriptionProgressWidget.py" line="175"/>
+        <source>同时转写 %1 个文件 · %2</source>
+        <translation>Transcribing %1 files at once · %2</translation>
+    </message>
+    <message>
+        <location filename="faster_whisper_GUI/transcriptionProgressWidget.py" line="184"/>
+        <source>文件 %1/%2 · %3</source>
+        <translation>File %1 of %2 · %3</translation>
+    </message>
+    <message>
+        <location filename="faster_whisper_GUI/transcriptionProgressWidget.py" line="186"/>
+        <source>文件 %1/%2 · %3 · %4</source>
+        <translation>File %1 of %2 · %3 · %4</translation>
+    </message>
+    <message>
+        <location filename="faster_whisper_GUI/transcriptionProgressWidget.py" line="194"/>
+        <source>正在准备音频</source>
+        <translation>Preparing audio</translation>
+    </message>
+    <message>
+        <location filename="faster_whisper_GUI/transcriptionProgressWidget.py" line="204"/>
+        <source>已取消</source>
+        <translation>Cancelled</translation>
+    </message>
+    <message>
+        <location filename="faster_whisper_GUI/transcriptionProgressWidget.py" line="209"/>
+        <source>部分文件转写失败</source>
+        <translation>Some files failed to transcribe</translation>
+    </message>
+    <message>
+        <location filename="faster_whisper_GUI/transcriptionProgressWidget.py" line="214"/>
+        <source>用时 %1</source>
+        <translation>Elapsed %1</translation>
+    </message>
+    <message>
+        <location filename="faster_whisper_GUI/transcriptionProgressWidget.py" line="219"/>
+        <source>正在估算剩余时间</source>
+        <translation>Estimating remaining time</translation>
+    </message>
+    <message>
+        <location filename="faster_whisper_GUI/transcriptionProgressWidget.py" line="221"/>
+        <source>即将完成</source>
+        <translation>Finishing</translation>
+    </message>
+    <message>
+        <location filename="faster_whisper_GUI/transcriptionProgressWidget.py" line="222"/>
+        <source>剩余约 %1</source>
+        <translation>About %1 remaining</translation>
+    </message>
+    <message>
+        <location filename="faster_whisper_GUI/transcriptionProgressWidget.py" line="228"/>
+        <source>%1 秒</source>
+        <translation>%1 sec</translation>
+    </message>
+    <message>
+        <location filename="faster_whisper_GUI/transcriptionProgressWidget.py" line="231"/>
+        <source>%1 分 %2 秒</source>
+        <translation>%1 min %2 sec</translation>
+    </message>
+    <message>
+        <location filename="faster_whisper_GUI/transcriptionProgressWidget.py" line="233"/>
+        <source>%1 小时 %2 分</source>
+        <translation>%1 hr %2 min</translation>
     </message>
 </context>
 </TS>

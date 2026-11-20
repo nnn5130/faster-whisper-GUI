@@ -9,6 +9,47 @@ from PySide6.QtWidgets import (
 
 from qfluentwidgets import (DoubleSpinBox, PushButton, ComboBox, FluentIcon)
 
+
+class EditableDoubleSpinBox(DoubleSpinBox):
+    """Double spin box whose number can be selected and edited.
+
+    qfluentwidgets draws the up and down buttons with its own layout and then
+    asks the style for the text field. With button symbols turned off, that
+    field comes back 1 pixel wide, so the value is invisible and clicks land
+    on the empty frame instead of the editor.
+    """
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setMinimumWidth(140)
+        edit = self.lineEdit()
+        edit.setFrame(False)
+        edit.setStyleSheet("background: transparent; border: none;")
+
+    def resizeEvent(self, event):
+        super().resizeEvent(event)
+        self._place_edit_field()
+
+    def showEvent(self, event):
+        super().showEvent(event)
+        self._place_edit_field()
+
+    def _place_edit_field(self):
+        edit = self.lineEdit()
+        if edit is None:
+            return
+        button_left = self.width()
+        for button in (getattr(self, "upButton", None), getattr(self, "downButton", None)):
+            if button is not None and button.isVisible() and button.x() > 8:
+                button_left = min(button_left, button.x())
+        if button_left >= self.width() or button_left <= 8:
+            button_left = self.width() - 72
+        edit.setGeometry(2, 1, max(24, button_left - 6), max(1, self.height() - 2))
+        edit.raise_()
+        for button in (getattr(self, "upButton", None), getattr(self, "downButton", None)):
+            if button is not None:
+                button.raise_()
+
 from .navigationInterface import NavigationBaseInterface
 from .fileNameListViewInterface import FileNameListView
 from .outputLabelLineEditButtonWidget import OutputGroupWidget
@@ -69,7 +110,7 @@ class BanditParamGroupWidget(QWidget):
         self.vBoxLayout_overlap = QVBoxLayout()
         self.param_hBoxLayout.addLayout(self.vBoxLayout_overlap)
 
-        self.spinBox_overlap = DoubleSpinBox()
+        self.spinBox_overlap = EditableDoubleSpinBox()
         self.spinBox_overlap.setMaximum(0.5)
         self.spinBox_overlap.setMinimum(0.0)
         self.spinBox_overlap.setSingleStep(0.05)
@@ -87,7 +128,7 @@ class BanditParamGroupWidget(QWidget):
         self.vBoxLayout_segment = QVBoxLayout()
         self.param_hBoxLayout.addLayout(self.vBoxLayout_segment)
 
-        self.spinBox_segment = DoubleSpinBox()
+        self.spinBox_segment = EditableDoubleSpinBox()
         self.spinBox_segment.setMaximum(100.0)
         self.spinBox_segment.setMinimum(1)
         self.spinBox_segment.setSingleStep(1)

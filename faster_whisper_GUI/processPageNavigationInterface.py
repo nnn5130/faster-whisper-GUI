@@ -20,6 +20,7 @@ from .navigationInterface import NavigationBaseInterface
 from .fasterWhisperGuiIcon import FasterWhisperGUIIcon
 from .config import CAPTURE_PARA
 from .style_sheet import StyleSheet
+from .transcriptionProgressWidget import TranscriptionProgressWidget
 
 # from .style_sheet import StyleSheet
 from .fileNameListViewInterface import FileNameListView
@@ -71,6 +72,9 @@ class ProcessPageNavigationInterface(NavigationBaseInterface):
         
         self.fileNameListView = FileNameListView(self)
         self.addWidget(self.fileNameListView)
+
+        self.progressWidget = TranscriptionProgressWidget(self)
+        self.addWidget(self.progressWidget)
 
         # ------------------------------------------------------------------------------------------
         self.button_process = PushButton()
