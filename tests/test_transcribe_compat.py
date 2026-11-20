@@ -5,6 +5,8 @@ import os
 import sys
 import types
 import unittest
+
+import numpy as np
 from dataclasses import dataclass
 from typing import NamedTuple
 
@@ -21,6 +23,7 @@ if "faster_whisper_GUI" not in sys.modules:
 from faster_whisper_GUI.transcribe_compat import (
     compatible_transcribe_kwargs,
     compatible_vad_parameters,
+    ensure_ctranslate2_float32_features,
 )
 from faster_whisper_GUI.transcription_progress import TranscriptionProgressTracker
 
@@ -314,6 +317,59 @@ class VadOptionsCompatTests(unittest.TestCase):
         self.assertEqual(options.min_speech_duration_ms, 0)
         self.assertEqual(options.min_silence_duration_ms, 2000)
         self.assertEqual(options.speech_pad_ms, 400)
+
+
+class Float32FeatureTests(unittest.TestCase):
+    def test_float64_features_are_cast_before_ctranslate2(self):
+        fast = types.ModuleType("faster_whisper")
+        transcribe = types.ModuleType("faster_whisper.transcribe")
+
+        def storage(segment):
+            if getattr(segment, "dtype", None) == np.float64 or getattr(segment.dtype, "str", "") == "<f8":
+                raise ValueError("Unsupported type: <f8")
+            storage.seen = segment.dtype
+            return segment
+
+        transcribe.get_ctranslate2_storage = storage
+        previous_fast = sys.modules.get("faster_whisper")
+        previous_transcribe = sys.modules.get("faster_whisper.transcribe")
+        sys.modules["faster_whisper"] = fast
+        sys.modules["faster_whisper.transcribe"] = transcribe
+        try:
+            features = np.ones((80, 3000), dtype=np.float64)
+            self.assertEqual(features.dtype.str, "<f8")
+            with self.assertRaises(ValueError):
+                transcribe.get_ctranslate2_storage(features)
+
+            ensure_ctranslate2_float32_features()
+            encoded = transcribe.get_ctranslate2_storage(features)
+            self.assertEqual(encoded.dtype, np.float32)
+            self.assertEqual(storage.seen, np.float32)
+
+            unchanged = np.ones((80, 8), dtype=np.float32)
+            again = transcribe.get_ctranslate2_storage(unchanged)
+            self.assertIs(again, unchanged)
+
+            # VAD has already finished before encode. Segments still drive progress.
+            segments = [types.SimpleNamespace(end=12.0), types.SimpleNamespace(end=24.0)]
+            tracker = TranscriptionProgressTracker(["sample.mp4"], [30.0])
+            tracker.start()
+            tracker.begin_file("sample.mp4")
+            tracker.set_media_duration("sample.mp4", 30.0, 18.0)
+            for segment in segments:
+                transcribe.get_ctranslate2_storage(np.ones((80, 10), dtype=np.float64))
+                tracker.update_file("sample.mp4", segment.end)
+            self.assertGreater(tracker.snapshot()["overall_fraction"], 0.0)
+            self.assertEqual(tracker.snapshot()["active"][0]["fraction"], 24.0 / 30.0)
+        finally:
+            if previous_fast is None:
+                sys.modules.pop("faster_whisper", None)
+            else:
+                sys.modules["faster_whisper"] = previous_fast
+            if previous_transcribe is None:
+                sys.modules.pop("faster_whisper.transcribe", None)
+            else:
+                sys.modules["faster_whisper.transcribe"] = previous_transcribe
 
 
 if __name__ == "__main__":

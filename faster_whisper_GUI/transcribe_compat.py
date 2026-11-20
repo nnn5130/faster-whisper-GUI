@@ -112,3 +112,32 @@ def compatible_transcribe_kwargs(transcribe: Callable, options: dict) -> Tuple[d
         else:
             dropped.append(key)
     return accepted, dropped
+
+
+def ensure_ctranslate2_float32_features() -> None:
+    """Cast float64 model inputs to float32 before CTranslate2 sees them.
+
+    CTranslate2 4.9 ``StorageView.from_array`` rejects numpy float64. Its error
+    is ``Unsupported type: <f8`` (``<f8`` is the little-endian float64 type
+    string). That shows up on the first encoded window, after VAD and language
+    info have already been printed. Mel features are documented as float32;
+    casting float64 down to float32 keeps those values and lets encoding run.
+    float32 arrays are left unchanged. VAD itself is not modified.
+    """
+    try:
+        import numpy as np
+        import faster_whisper.transcribe as fw_transcribe
+    except Exception:
+        return
+
+    current = fw_transcribe.get_ctranslate2_storage
+    if getattr(current, "_fwgui_float32", False):
+        return
+
+    def get_ctranslate2_storage(segment):
+        if isinstance(segment, np.ndarray) and segment.dtype == np.float64:
+            segment = np.ascontiguousarray(segment, dtype=np.float32)
+        return current(segment)
+
+    get_ctranslate2_storage._fwgui_float32 = True
+    fw_transcribe.get_ctranslate2_storage = get_ctranslate2_storage
