@@ -36,6 +36,7 @@ from .util import (
 
 from .config import ENCODING_DICT, Task_list
 from .transcription_progress import TranscriptionProgressTracker, probe_media_duration
+from .transcribe_compat import compatible_transcribe_kwargs
 
 
 class AudioStreamTranscribeWorker(QThread):
@@ -291,43 +292,50 @@ class TranscribeWorker(QThread):
 
         print("开始处理音频...")
         try:
-            segments, info = self.model.transcribe(
-                                                audio=file,
-                                                language=self.parameters["language"],
-                                                task=Task_list[int(self.parameters["task"])],
-                                                log_progress = False,
-                                                beam_size=self.parameters["beam_size"],
-                                                best_of=self.parameters["best_of"],
-                                                patience=self.parameters["patience"],
-                                                length_penalty=self.parameters["length_penalty"],
-                                                temperature=self.parameters["temperature"],
-                                                compression_ratio_threshold=self.parameters["compression_ratio_threshold"],
-                                                log_prob_threshold=self.parameters["log_prob_threshold"],
-                                                no_speech_threshold=self.parameters["no_speech_threshold"],
-                                                condition_on_previous_text=self.parameters["condition_on_previous_text"],
-                                                initial_prompt=self.parameters["initial_prompt"],
-                                                prefix=self.parameters["prefix"],
-                                                repetition_penalty=self.parameters["repetition_penalty"],
-                                                no_repeat_ngram_size=self.parameters["no_repeat_ngram_size"],
-                                                prompt_reset_on_temperature = self.parameters["prompt_reset_on_temperature"],
-                                                suppress_blank=self.parameters["suppress_blank"],
-                                                suppress_tokens=self.parameters["suppress_tokens"],
-                                                without_timestamps=self.parameters["without_timestamps"],
-                                                max_initial_timestamp=self.parameters["max_initial_timestamp"],
-                                                word_timestamps=self.parameters["word_timestamps"],
-                                                prepend_punctuations=self.parameters["prepend_punctuations"],
-                                                append_punctuations=self.parameters["append_punctuations"],
-                                                multilingual = self.parameters["multilingual"],
-                                                max_new_tokens=self.parameters["max_new_tokens"],
-                                                chunk_length=self.parameters["chunk_length"],
-                                                clip_timestamps=self.parameters["clip_timestamps"],
-                                                hallucination_silence_threshold=self.parameters["hallucination_silence_threshold"],
-                                                hotwords = self.parameters["hotwords"],
-                                                language_detection_threshold = self.parameters["language_detection_threshold"],
-                                                language_detection_segments = self.parameters["language_detection_segments"],
-                                                vad_filter=self.vad_filter,
-                                                vad_parameters=self.vad_parameters
-                                            )
+            transcribe_options = {
+                                                "audio": file,
+                                                "language": self.parameters["language"],
+                                                "task": Task_list[int(self.parameters["task"])],
+                                                "log_progress": False,
+                                                "beam_size": self.parameters["beam_size"],
+                                                "best_of": self.parameters["best_of"],
+                                                "patience": self.parameters["patience"],
+                                                "length_penalty": self.parameters["length_penalty"],
+                                                "temperature": self.parameters["temperature"],
+                                                "compression_ratio_threshold": self.parameters["compression_ratio_threshold"],
+                                                "log_prob_threshold": self.parameters["log_prob_threshold"],
+                                                "no_speech_threshold": self.parameters["no_speech_threshold"],
+                                                "condition_on_previous_text": self.parameters["condition_on_previous_text"],
+                                                "initial_prompt": self.parameters["initial_prompt"],
+                                                "prefix": self.parameters["prefix"],
+                                                "repetition_penalty": self.parameters["repetition_penalty"],
+                                                "no_repeat_ngram_size": self.parameters["no_repeat_ngram_size"],
+                                                "prompt_reset_on_temperature": self.parameters["prompt_reset_on_temperature"],
+                                                "suppress_blank": self.parameters["suppress_blank"],
+                                                "suppress_tokens": self.parameters["suppress_tokens"],
+                                                "without_timestamps": self.parameters["without_timestamps"],
+                                                "max_initial_timestamp": self.parameters["max_initial_timestamp"],
+                                                "word_timestamps": self.parameters["word_timestamps"],
+                                                "prepend_punctuations": self.parameters["prepend_punctuations"],
+                                                "append_punctuations": self.parameters["append_punctuations"],
+                                                "multilingual": self.parameters["multilingual"],
+                                                "max_new_tokens": self.parameters["max_new_tokens"],
+                                                "chunk_length": self.parameters["chunk_length"],
+                                                "clip_timestamps": self.parameters["clip_timestamps"],
+                                                "hallucination_silence_threshold": self.parameters["hallucination_silence_threshold"],
+                                                "hotwords": self.parameters["hotwords"],
+                                                "language_detection_threshold": self.parameters["language_detection_threshold"],
+                                                "language_detection_segments": self.parameters["language_detection_segments"],
+                                                "vad_filter": self.vad_filter,
+                                                "vad_parameters": self.vad_parameters,
+                                            }
+            transcribe_options, dropped = compatible_transcribe_kwargs(
+                self.model.transcribe,
+                transcribe_options,
+            )
+            if dropped:
+                print("skip unsupported transcribe options: " + ", ".join(dropped))
+            segments, info = self.model.transcribe(**transcribe_options)
         except Exception as exc:
             print(f"{file} 处理失败!")
             print(str(exc))
