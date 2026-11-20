@@ -64,7 +64,7 @@ from .vadPageNavigationInterface import VADNavigationInterface
 from .processPageNavigationInterface import ProcessPageNavigationInterface
 from .outputPageNavigationInterface import OutputPageNavigationInterface
 from .homePageNavigationInterface import HomePageNavigationinterface
-from .demucsPageNavigationInterface import DemucsPageNavigation
+from .banditPageNavigationInterface import BanditPageNavigation
 from .aboutPageNavigationInterface import AboutPageNavigationInterface
 from .fasterWhisperGuiIcon import FasterWhisperGUIIcon
 from .settingPageNavigation import SettingPageNavigationInterface
@@ -85,7 +85,7 @@ class UIMainWin(FramelessMainWindow):
         self.default_theme = "light"
         self.model_param = {}
         self.setting = {}
-        self.demucs = {}
+        self.bandit = {}
         self.Transcription_param = {}
         self.output_whisperX_param = {}
         self.vad_param = {}
@@ -113,9 +113,9 @@ class UIMainWin(FramelessMainWindow):
                 self.setting = {}
 
             try:
-                self.demucs = json_data["demucs"]
-            except:
-                self.demucs = {}
+                self.bandit = json_data.get("bandit") or json_data.get("demucs") or {}
+            except Exception:
+                self.bandit = {}
 
             try:
                 self.Transcription_param = json_data["Transcription_param"]
@@ -151,8 +151,8 @@ class UIMainWin(FramelessMainWindow):
         if self.setting != {}:
             self.page_setting.setParam(self.setting)
         
-        if self.demucs != {}:
-            self.page_demucs.setParam(self.demucs)
+        if self.bandit != {}:
+            self.page_bandit.setParam(self.bandit)
 
         if self.Transcription_param != {}:
             self.page_transcribes.setParam(self.Transcription_param)
@@ -274,9 +274,9 @@ class UIMainWin(FramelessMainWindow):
         self.addSubInterface(self.page_home, "pageHome", self.tr("Home"), icon=FluentIcon.HOME)
         self.pages.append(self.page_home)
 
-        self.page_demucs = DemucsPageNavigation(self)
-        self.addSubInterface(self.page_demucs, "pageDecums", self.tr("声乐分离"), icon=FasterWhisperGUIIcon.DEMUCS)
-        self.pages.append(self.page_demucs)
+        self.page_bandit = BanditPageNavigation(self)
+        self.addSubInterface(self.page_bandit, "pageBandit", self.tr("影视声源分离"), icon=FasterWhisperGUIIcon.DEMUCS)
+        self.pages.append(self.page_bandit)
 
         self.page_model = ModelNavigationInterface(self)
         self.addSubInterface(self.page_model, "pageModelParameter", self.tr("模型参数"), icon=FluentIcon.BOOK_SHELF)

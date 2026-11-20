@@ -1,0 +1,15 @@
+BandIt model code
+Copyright 2023 Karn N. Watcharasupat and the BandIt authors
+
+This directory contains an inference-oriented adaptation of
+https://github.com/kwatcharasupat/bandit
+licensed under the Apache License, Version 2.0 (see LICENSE).
+
+Local changes:
+- package-relative imports
+- BandSplitWrapperBase subclasses torch.nn.Module instead of
+  pytorch_lightning.LightningModule, and forwards constructor arguments
+  to the STFT mixin
+- musical-scale helpers no longer import librosa
+- bark / ERB filterbank imports are lazy, so the BandIt Plus
+  (musical, 64-band) checkpoint does not require spafe

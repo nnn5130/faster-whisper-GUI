@@ -55,7 +55,8 @@ from .UI_MainWindows import UIMainWin
 from .tableModel_segments_path_info import TableModel
 from .tableViewInterface import CustomTableView
 from .whisper_x import WhisperXWorker
-from .de_mucs import DemucsWorker
+from .bandit.inference import DEFAULT_CHECKPOINT_PATH
+from .bandit_worker import BanditWorker
 # from .style_sheet import StyleSheet
 from .subtitleFileRead import readSRTFileToSegments, readJSONFileToSegments
 from .config import ENCODING_DICT
@@ -132,7 +133,7 @@ class MainWindows(UIMainWin):
         self.audio_capture_thread = None
         self.whisperXWorker = None
         self.outputWorker = None
-        self.demucsWorker = None
+        self.banditWorker = None
         self.loadModelWorker = None
 
         self.stateTool = None
@@ -156,7 +157,7 @@ class MainWindows(UIMainWin):
     def textOfParentClass(self) -> None:
         # to fixed bug of translator 
         self.text_home = self.__tr("Home")
-        self.text_AVE = self.__tr("声乐分离")
+        self.text_AVE = self.__tr("影视声源分离")
         self.text_modelParam = self.__tr("模型参数")
         self.text_VAD = self.__tr("人声活动检测")
         self.text_fwParam = self.__tr("转写参数")
@@ -1303,13 +1304,13 @@ class MainWindows(UIMainWin):
             
             self.showResultInTable(self.current_result)
             
-    def reSetButton_demucs_process(self):
-        self.page_demucs.process_button.setText(self.__tr("提取"))
-        self.page_demucs.process_button.setIcon( FluentIcon.IOT)
-        self.page_demucs.process_button.setEnabled(True)
+    def reSetButton_bandit_process(self):
+        self.page_bandit.process_button.setText(self.__tr("提取"))
+        self.page_bandit.process_button.setIcon( FluentIcon.IOT)
+        self.page_bandit.process_button.setEnabled(True)
         
 
-    def demucs_file_process_status(self, status:dict):
+    def bandit_file_process_status(self, status:dict):
         if status["task"] == "reasmple audio":
             content = self.__tr("音频重采样")
         elif status["task"] == "separate sources":
@@ -1331,54 +1332,52 @@ class MainWindows(UIMainWin):
         self.setStateTool(text=f"{fileName} {content}", status=status["status"])
 
 
-    def demucs_process_over(self, status:bool):
+    def bandit_process_over(self, status:bool):
         if status:
             self.setStateTool(text=self.__tr("分离完成"), status=True)
-            self.raiseSuccessInfoBar(self.__tr("Demucs"), self.__tr("音轨分离成功"))
+            self.raiseSuccessInfoBar(self.__tr("BandIt Plus"), self.__tr("音轨分离成功"))
 
         else:
             self.setStateTool(text=self.__tr("结束"), status=True)
-            self.raiseErrorInfoBar(self.__tr("Demucs"), self.__tr("分离失败"))
+            self.raiseErrorInfoBar(self.__tr("BandIt Plus"), self.__tr("分离失败"))
 
-        self.reSetButton_demucs_process()
+        self.reSetButton_bandit_process()
 
-        # print(f"+++over, model:{self.demucsWorker.model}")
-        # del self.demucsWorker.model
-        del self.demucsWorker
-        self.demucsWorker = None
+        del self.banditWorker
+        self.banditWorker = None
         
         if torch.cuda.is_available():
             torch.cuda.empty_cache()
             
 
-    def demucsProcess(self):
+    def banditProcess(self):
         
-        if self.demucsWorker is not None and self.demucsWorker.isRunning():
+        if self.banditWorker is not None and self.banditWorker.isRunning():
             
             message_w = MessageBox(self.__tr("取消"), self.__tr('确定取消？'),self)
 
             if not message_w.exec():
                 return
 
-            self.outputWithDateTime("Cancel Demucs")
-            self.page_demucs.process_button.setEnabled(False)
-            self.demucsWorker.requestInterruption()
-            self.demucsWorker.stop()
+            self.outputWithDateTime("Cancel BandIt Plus")
+            self.page_bandit.process_button.setEnabled(False)
+            self.banditWorker.requestInterruption()
+            self.banditWorker.stop()
 
-            while(self.demucsWorker.isRunning()):
+            while(self.banditWorker.isRunning()):
                 if self.stateTool is not None:
                     self.stateTool.setContent(self.__tr("正在取消操作"))
                     self.stateTool.setTitle(self.__tr("取消"))
                 else:
                     self.setStateTool(self.__tr("取消"), self.__tr("正在取消操作"), False)
 
-            self.reSetButton_demucs_process()
+            self.reSetButton_bandit_process()
             self.setStateTool(self.__tr("取消"), self.__tr("用户取消操作"),True)
             return
         
-        self.outputWithDateTime("Demucs")
+        self.outputWithDateTime("BandIt Plus")
     
-        param = self.getDemucsParams()
+        param = self.getBanditParams()
 
         if len(param["audio"]) < 1 or(len(param["audio"]) == 1 and param["audio"][0] == ""):
             
@@ -1388,52 +1387,51 @@ class MainWindows(UIMainWin):
         for key,value in param.items():
             print(f"{key}: {value}")
 
-        if self.demucsWorker is None:
-            self.demucsWorker = DemucsWorker(
+        if self.banditWorker is None:
+            self.banditWorker = BanditWorker(
                                             self,
                                             param["audio"],
                                             param["stems"],
-                                            r"./cache/hdemucs_high_trained.pt",
+                                            DEFAULT_CHECKPOINT_PATH,
                                             segment=param["segment"],
                                             overlap=param["overlap"],
                                             output_path=param["output_path"]
                                         )
+            self.banditWorker.signal_vr_over.connect(self.bandit_process_over)
+            self.banditWorker.file_process_status.connect(self.bandit_file_process_status)
         
         else:
-            self.demucsWorker.audio = param["audio"]
-            self.demucsWorker.stems = param["stems"]
-            self.demucsWorker.segment = param["segment"]
-            self.demucsWorker.overlap = param["overlap"]
-            self.demucsWorker.output_path = param["output_path"]
-        
-        self.demucsWorker.signal_vr_over.connect(self.demucs_process_over)
-        self.demucsWorker.file_process_status.connect(self.demucs_file_process_status)
+            self.banditWorker.audio = param["audio"]
+            self.banditWorker.stems = param["stems"]
+            self.banditWorker.segment = param["segment"]
+            self.banditWorker.overlap = param["overlap"]
+            self.banditWorker.output_path = param["output_path"]
 
-        self.setStateTool(self.__tr("Demucs"), self.__tr("音轨分离"), False)
-        self.demucsWorker.start()
+        self.setStateTool(self.__tr("BandIt Plus"), self.__tr("音轨分离"), False)
+        self.banditWorker.start()
 
-        self.page_demucs.process_button.setText(self.__tr("取消"))
-        self.page_demucs.process_button.setIcon(":/resource/Image/Cancel_red")
+        self.page_bandit.process_button.setText(self.__tr("取消"))
+        self.page_bandit.process_button.setIcon(":/resource/Image/Cancel_red")
 
 
-    def getDemucsParams(self):
-        demucs_param = {}
-        output_path = self.page_demucs.outputGroupWidget.LineEdit_output_dir.text().strip()
-        demucs_param["output_path"] = output_path
+    def getBanditParams(self):
+        bandit_param = {}
+        output_path = self.page_bandit.outputGroupWidget.LineEdit_output_dir.text().strip()
+        bandit_param["output_path"] = output_path
 
-        overlap = self.page_demucs.demucs_param_widget.spinBox_overlap.value()
-        demucs_param["overlap"] = overlap
+        overlap = self.page_bandit.bandit_param_widget.spinBox_overlap.value()
+        bandit_param["overlap"] = overlap
 
-        segment = self.page_demucs.demucs_param_widget.spinBox_segment.value()
-        demucs_param["segment"] = segment
+        segment = self.page_bandit.bandit_param_widget.spinBox_segment.value()
+        bandit_param["segment"] = segment
 
-        stems = self.page_demucs.demucs_param_widget.comboBox_stems.currentIndex()
-        demucs_param["stems"] = stems
+        stems = self.page_bandit.bandit_param_widget.comboBox_stems.currentIndex()
+        bandit_param["stems"] = stems
 
-        audio = self.page_demucs.fileListView.avFileList
-        demucs_param["audio"] = audio
+        audio = self.page_bandit.fileListView.avFileList
+        bandit_param["audio"] = audio
 
-        return demucs_param
+        return bandit_param
 
     def unloadWhisperModel(self):
         """
@@ -1538,7 +1536,7 @@ class MainWindows(UIMainWin):
         self.page_process.processResultText.textChanged.connect(lambda: self.page_process.processResultText.moveCursor(QTextCursor.MoveOperation.End, mode=QTextCursor.MoveMode.MoveAnchor))
         self.page_process.fileNameListView.ignore_files_signal.connect(lambda ignore_files_info: self.raiseInfoBar(self.__tr("忽略文件"), ignore_files_info["ignore_reason"]+"\n"+"\n".join(ignore_files_info["ignore_files"])))
 
-        self.page_home.itemLabel_demucs.mainButton.clicked.connect(lambda:self.stackedWidget.setCurrentWidget(self.page_demucs))
+        self.page_home.itemLabel_bandit.mainButton.clicked.connect(lambda:self.stackedWidget.setCurrentWidget(self.page_bandit))
         self.page_home.itemLabel_faster_whisper.mainButton.clicked.connect(lambda:self.stackedWidget.setCurrentWidget(self.page_process))
         self.page_home.itemLabel_whisperx.mainButton.clicked.connect(lambda:self.stackedWidget.setCurrentWidget(self.page_output))
         self.page_home.itemLabel_faster_whisper.subButton.clicked.connect(lambda:self.stackedWidget.setCurrentWidget(self.page_transcribes))
@@ -1551,8 +1549,8 @@ class MainWindows(UIMainWin):
         self.page_output.unloadWhisperModelPushbutton.clicked.connect(self.unloadWhisperModel)
         self.page_output.outputAudioPartWithSpeakerButton.clicked.connect(self.outputAudioPartWithSpeaker)
 
-        self.page_demucs.process_button.clicked.connect(self.demucsProcess)
-        self.page_demucs.fileListView.ignore_files_signal.connect(lambda ignore_files_info: self.raiseInfoBar(self.__tr("忽略文件"), ignore_files_info["ignore_reason"]+"\n"+"\n".join(ignore_files_info["ignore_files"])))
+        self.page_bandit.process_button.clicked.connect(self.banditProcess)
+        self.page_bandit.fileListView.ignore_files_signal.connect(lambda ignore_files_info: self.raiseInfoBar(self.__tr("忽略文件"), ignore_files_info["ignore_reason"]+"\n"+"\n".join(ignore_files_info["ignore_files"])))
         
         self.page_setting.pushButton_backupConfigFile.clicked.connect(self.backupConfigFile)
         self.page_setting.pushButton_loadConfigFile.clicked.connect(self.loadBackupConfigFile)
@@ -1697,9 +1695,9 @@ class MainWindows(UIMainWin):
                 self.outputWorker.requestInterruption()
                 self.outputWorker.stop()
             
-            if self.demucsWorker is not None and self.demucsWorker.is_running:
-                self.demucsWorker.requestInterruption()
-                self.demucsWorker.stop()
+            if self.banditWorker is not None and self.banditWorker.is_running:
+                self.banditWorker.requestInterruption()
+                self.banditWorker.stop()
             
             # 退还系统错误输出 和标准输出
             sys.stderr = sys.__stderr__
@@ -1726,14 +1724,14 @@ class MainWindows(UIMainWin):
         outputWithDateTime("SaveConfigFile")
         model_param = self.page_model.getParam()
         setting_param = self.page_setting.getParam()    
-        demucs_param = self.page_demucs.getParam()
+        bandit_param = self.page_bandit.getParam()
         Transcription_param = self.page_transcribes.getParam()
         output_whisperX_param = self.page_output.getParam()
         vad_param = self.page_VAD.getParam()
 
         config_json = {
                         "theme":"dark" if isDarkTheme() else "light",
-                        "demucs":demucs_param,
+                        "bandit":bandit_param,
                         "model_param" : model_param,
                         "vad_param": vad_param,
                         "setting":setting_param,

@@ -263,21 +263,20 @@ By using this software, you have read and agreed to the following user agreement
     </message>
 </context>
 <context>
-    <name>DemucsPageNavigation</name>
+    <name>BanditPageNavigation</name>
     <message>
-        <location filename="faster_whisper_gui/demucsPageNavigationInterface.py" line="125"/>
-        <source>使用 Demucs4.0 模型的 AVS（自动人声分离）方案</source>
-        <oldsource>使用 Demucs4.0 模型的 AVE（自动人声提取）方案</oldsource>
-        <translation>AVS(Automatic Vocal Separation) based on Demucs4.0</translation>
+        <location filename="faster_whisper_GUI/banditPageNavigationInterface.py" line="116"/>
+        <source>使用 BandIt Plus 分离对白、音乐和效果。首次运行会把官方权重下载到 ./cache/dnr-3s-mus64-l1snr-plus.ckpt</source>
+        <translation>Separate dialogue, music, and effects with BandIt Plus. The official checkpoint is downloaded to ./cache/dnr-3s-mus64-l1snr-plus.ckpt on first use</translation>
     </message>
     <message>
-        <location filename="faster_whisper_gui/demucsPageNavigationInterface.py" line="150"/>
+        <location filename="faster_whisper_GUI/banditPageNavigationInterface.py" line="136"/>
         <source>提取</source>
         <translation>Extraction</translation>
     </message>
 </context>
 <context>
-    <name>DemucsParamGroupWidget</name>
+    <name>BanditParamGroupWidget</name>
     <message>
         <source>All Stems</source>
         <translation type="vanished">所有音轨</translation>
@@ -309,38 +308,33 @@ By using this software, you have read and agreed to the following user agreement
     </message>
     <message>
         <location filename="faster_whisper_gui/demucsPageNavigationInterface.py" line="37"/>
-        <source>仅人声</source>
-        <translation>Vocals</translation>
+        <source>仅对白</source>
+        <translation>Dialogue only</translation>
     </message>
     <message>
-        <location filename="faster_whisper_gui/demucsPageNavigationInterface.py" line="38"/>
-        <source>仅其它</source>
-        <translation>Other</translation>
+        <location filename="faster_whisper_GUI/banditPageNavigationInterface.py" line="38"/>
+        <source>仅音乐</source>
+        <translation>Music only</translation>
     </message>
     <message>
-        <location filename="faster_whisper_gui/demucsPageNavigationInterface.py" line="39"/>
-        <source>仅贝斯声</source>
-        <translation>Bass</translation>
+        <location filename="faster_whisper_GUI/banditPageNavigationInterface.py" line="39"/>
+        <source>仅效果</source>
+        <translation>Effects only</translation>
     </message>
     <message>
-        <location filename="faster_whisper_gui/demucsPageNavigationInterface.py" line="40"/>
-        <source>仅鼓点声</source>
-        <translation>Drums</translation>
+        <location filename="faster_whisper_GUI/banditPageNavigationInterface.py" line="40"/>
+        <source>对白、背景二分</source>
+        <translation>Dialogue and background</translation>
     </message>
     <message>
-        <location filename="faster_whisper_gui/demucsPageNavigationInterface.py" line="42"/>
-        <source>人声、背景声二分</source>
-        <translation>Vocals and Others dichotomy</translation>
+        <location filename="faster_whisper_GUI/banditPageNavigationInterface.py" line="60"/>
+        <source>BandIt Plus 参数</source>
+        <translation>BandIt Plus options</translation>
     </message>
     <message>
-        <location filename="faster_whisper_gui/demucsPageNavigationInterface.py" line="62"/>
-        <source>Demucs 参数</source>
-        <translation>Demucs Options</translation>
-    </message>
-    <message>
-        <location filename="faster_whisper_gui/demucsPageNavigationInterface.py" line="83"/>
-        <source>分段采样的段间重叠度，该值不宜过小，以免影响分段之间的分离结果的融合度</source>
-        <translation>The overlap between segments sampled by segments .Should not be too small, so as not to affect the fusion of the separation results between segments</translation>
+        <location filename="faster_whisper_GUI/banditPageNavigationInterface.py" line="78"/>
+        <source>相邻分段的重叠比例。0.25 表示后一段与前一段重叠 25%，并用交叉淡化拼回去。比例越大，接缝越不明显，但处理更慢</source>
+        <translation>Fraction of each chunk that overlaps the next one. 0.25 crossfades 25% of the chunk. Higher values hide the joins and take longer</translation>
     </message>
     <message>
         <location filename="faster_whisper_gui/demucsPageNavigationInterface.py" line="85"/>
@@ -349,12 +343,10 @@ By using this software, you have read and agreed to the following user agreement
     </message>
     <message>
         <location filename="faster_whisper_gui/demucsPageNavigationInterface.py" line="100"/>
-        <source>Demucs 是一个极其消耗计算机内存和显存的模型，
-世界上没有任何计算机能够直接使用该模型处理长时音频数据
-因此数据将按照该值所示的秒数，分段处理，值越大将越消耗计算机资源，但效果可能会有提升</source>
-        <translation>Demucs is a model that consumes extremely much computer memory and video memory.
-No computer in the world can directly use this model to process long-term audio data.
-Therefore, the data will be processed in segments according to the number of seconds shown by the value. The higher the value, the more computer resources will be consumed, but the effect may be improved</translation>
+        <source>BandIt Plus 按该秒数分段推理。模型在 6 秒片段上训练。
+分段越长越占内存和显存。RTX 4070 12GB 上 6 到 10 秒比较合适</source>
+        <translation>BandIt Plus runs on chunks of this many seconds. It was trained on 6-second chunks.
+Longer chunks use more memory. On a 12GB RTX 4070, 6 to 10 seconds is a good range</translation>
     </message>
     <message>
         <location filename="faster_whisper_gui/demucsPageNavigationInterface.py" line="102"/>
@@ -478,13 +470,13 @@ Therefore, the data will be processed in segments according to the number of sec
     </message>
     <message>
         <location filename="faster_whisper_gui/homePageNavigationInterface.py" line="36"/>
-        <source>Demucs</source>
-        <translation>Demucs</translation>
+        <source>BandIt Plus</source>
+        <translation>BandIt Plus</translation>
     </message>
     <message>
-        <location filename="faster_whisper_gui/homePageNavigationInterface.py" line="38"/>
-        <source>自动人声提取</source>
-        <translation>Automatic Vocal Extraction</translation>
+        <location filename="faster_whisper_GUI/homePageNavigationInterface.py" line="37"/>
+        <source>对白、音乐、效果分离</source>
+        <translation>Dialogue, music, and effects</translation>
     </message>
     <message>
         <location filename="faster_whisper_gui/homePageNavigationInterface.py" line="41"/>
@@ -548,12 +540,11 @@ Therefore, the data will be processed in segments according to the number of sec
     </message>
     <message>
         <location filename="faster_whisper_gui/mainWindows.py" line="160"/>
-        <source>声乐分离</source>
-        <oldsource>声乐移除</oldsource>
-        <translation>Vocal Separation</translation>
+        <source>影视声源分离</source>
+        <translation>Cinematic Separation</translation>
     </message>
     <message>
-        <location filename="faster_whisper_gui/mainWindows.py" line="161"/>
+        <location filename="faster_whisper_GUI/mainWindows.py" line="161"/>
         <source>模型参数</source>
         <translation>Model Option</translation>
     </message>
@@ -940,11 +931,11 @@ Checking the fasterwhispergui.log file after exiting the software may get error 
         <location filename="faster_whisper_gui/mainWindows.py" line="1337"/>
         <location filename="faster_whisper_gui/mainWindows.py" line="1341"/>
         <location filename="faster_whisper_gui/mainWindows.py" line="1412"/>
-        <source>Demucs</source>
-        <translation>Demucs</translation>
+        <source>BandIt Plus</source>
+        <translation>BandIt Plus</translation>
     </message>
     <message>
-        <location filename="faster_whisper_gui/mainWindows.py" line="1337"/>
+        <location filename="faster_whisper_GUI/mainWindows.py" line="1337"/>
         <source>音轨分离成功</source>
         <translation>Separation Succeed</translation>
     </message>
@@ -1886,11 +1877,14 @@ If a crash occurs during the transfer process, please see</translation>
     </message>
     <message>
         <location filename="faster_whisper_gui/navigationInterface.py" line="140"/>
-        <source>version: {__version__}
-faster-whisper: {__FasterWhisper_version__}
-whisperX: {__WhisperX_version__}
-Demucs: {__Demucs_version__}</source>
-        <translation type="unfinished"></translation>
+        <source>version: 0.8.5
+faster-whisper: 1.1.0
+whisperX: 3.1.1
+BandIt Plus: Plus</source>
+        <translation>version: 0.8.5
+faster-whisper: 1.1.0
+whisperX: 3.1.1
+BandIt Plus: Plus</translation>
     </message>
 </context>
 <context>
@@ -2445,9 +2439,8 @@ the prompt with the previous text should be reset after configuring the temperat
     </message>
     <message>
         <location filename="faster_whisper_gui/UI_MainWindows.py" line="277"/>
-        <source>声乐分离</source>
-        <oldsource>声乐移除</oldsource>
-        <translation>Vocal Separation</translation>
+        <source>影视声源分离</source>
+        <translation>Cinematic Separation</translation>
     </message>
     <message>
         <location filename="faster_whisper_gui/UI_MainWindows.py" line="281"/>

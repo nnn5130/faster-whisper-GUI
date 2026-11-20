@@ -1,9 +1,9 @@
 # coding:utf-8
 from PySide6.QtCore import QCoreApplication
 from PySide6.QtWidgets import (
-                                QHBoxLayout, 
-                                QLabel, 
-                                QVBoxLayout, 
+                                QHBoxLayout,
+                                QLabel,
+                                QVBoxLayout,
                                 QWidget
                             )
 
@@ -15,12 +15,13 @@ from .outputLabelLineEditButtonWidget import OutputGroupWidget
 
 from .style_sheet import StyleSheet
 
-from .config import STEMS
+from .config import normalize_bandit_track_index
 
-class DemucsParamGroupWidget(QWidget):
+
+class BanditParamGroupWidget(QWidget):
     def __tr(self, text):
         return QCoreApplication.translate(self.__class__.__name__, text)
-    
+
     def __init__(self, parent: QWidget | None = ...) -> None:
         super().__init__(parent)
 
@@ -33,101 +34,101 @@ class DemucsParamGroupWidget(QWidget):
         self.mainWidget.setLayout(self.mainLayout)
 
         self.__tr_text_all_Stems = self.__tr("所有音轨")
-        self.__tr_text_Vocals = self.__tr("仅人声")
-        self.__tr_text_Other = self.__tr("仅其它")
-        self.__tr_text_Bass = self.__tr("仅贝斯声")
-        self.__tr_text_Drums = self.__tr("仅鼓点声")
-        self.__tr_text_Vocals_Others = self.__tr("人声、背景声二分")
+        self.__tr_text_Speech = self.__tr("仅对白")
+        self.__tr_text_Music = self.__tr("仅音乐")
+        self.__tr_text_Effects = self.__tr("仅效果")
+        self.__tr_text_Speech_Background = self.__tr("对白、背景二分")
 
         self.__tr_text_list = [
             self.__tr_text_all_Stems,
-            self.__tr_text_Vocals,
-            self.__tr_text_Other,
-            self.__tr_text_Bass,
-            self.__tr_text_Drums,
-            self.__tr_text_Vocals_Others
+            self.__tr_text_Speech,
+            self.__tr_text_Music,
+            self.__tr_text_Effects,
+            self.__tr_text_Speech_Background,
         ]
 
         self.setupUI()
-    
+
     def addWidget(self, widget, alignment):
         self.mainLayout.addWidget(widget, alignment=alignment)
-    
+
     def addLayout(self, layout):
         self.mainLayout.addLayout(layout)
 
-    
     def setupUI(self):
 
-        self.label_ = QLabel(self.__tr("Demucs 参数"))
+        self.label_ = QLabel(self.__tr("BandIt Plus 参数"))
         self.vBoxLayout.addWidget(self.label_)
-
-        # =====================================================================
 
         self.vBoxLayout.addWidget(self.mainWidget)
 
-        # =====================================================================
         self.param_hBoxLayout = QHBoxLayout()
         self.addLayout(self.param_hBoxLayout)
-        self.param_hBoxLayout.setContentsMargins(10,10,10,10)
-        
+        self.param_hBoxLayout.setContentsMargins(10, 10, 10, 10)
+
         self.vBoxLayout_overlap = QVBoxLayout()
         self.param_hBoxLayout.addLayout(self.vBoxLayout_overlap)
 
         self.spinBox_overlap = DoubleSpinBox()
-        self.spinBox_overlap.setMaximum(1.0)
-        self.spinBox_overlap.setMinimum(0.1)
-        self.spinBox_overlap.setSingleStep(0.1)
-        self.spinBox_overlap.setValue(0.10)
+        self.spinBox_overlap.setMaximum(0.5)
+        self.spinBox_overlap.setMinimum(0.0)
+        self.spinBox_overlap.setSingleStep(0.05)
+        self.spinBox_overlap.setValue(0.25)
         self.spinBox_overlap.setDecimals(2)
-        self.spinBox_overlap.setToolTip(self.tr("分段采样的段间重叠度，该值不宜过小，以免影响分段之间的分离结果的融合度"))
-        
+        self.spinBox_overlap.setToolTip(self.tr(
+            "相邻分段的重叠比例。0.25 表示后一段与前一段重叠 25%，并用交叉淡化拼回去。比例越大，接缝越不明显，但处理更慢"
+        ))
+
         self.label_overlap_param = QLabel(self.tr("采样重叠度"))
 
         self.vBoxLayout_overlap.addWidget(self.label_overlap_param)
         self.vBoxLayout_overlap.addWidget(self.spinBox_overlap)
 
-        # =============================================================================
         self.vBoxLayout_segment = QVBoxLayout()
         self.param_hBoxLayout.addLayout(self.vBoxLayout_segment)
 
         self.spinBox_segment = DoubleSpinBox()
         self.spinBox_segment.setMaximum(100.0)
         self.spinBox_segment.setMinimum(1)
-        self.spinBox_segment.setSingleStep(5)
-        self.spinBox_segment.setValue(10)
+        self.spinBox_segment.setSingleStep(1)
+        self.spinBox_segment.setValue(6.0)
         self.spinBox_segment.setDecimals(1)
-        self.spinBox_segment.setToolTip(self.tr("Demucs 是一个极其消耗计算机内存和显存的模型，\n世界上没有任何计算机能够直接使用该模型处理长时音频数据\n因此数据将按照该值所示的秒数，分段处理，值越大将越消耗计算机资源，但效果可能会有提升"))
+        self.spinBox_segment.setToolTip(self.tr(
+            "BandIt Plus 按该秒数分段推理。模型在 6 秒片段上训练。\n"
+            "分段越长越占内存和显存。RTX 4070 12GB 上 6 到 10 秒比较合适"
+        ))
 
         self.label_segment_param = QLabel(self.tr("分段长度(s)"))
 
         self.vBoxLayout_segment.addWidget(self.label_segment_param)
         self.vBoxLayout_segment.addWidget(self.spinBox_segment)
 
-        # =============================================================================
         self.vBoxLayout_stems = QVBoxLayout()
         self.param_hBoxLayout.addLayout(self.vBoxLayout_stems)
 
         self.comboBox_stems = ComboBox()
         for item in self.__tr_text_list:
             self.comboBox_stems.addItem(item)
-        # self.comboBox_stems.addItems(STEMS)
+        # Default matches the old "vocals only" choice: dialogue / speech.
         self.comboBox_stems.setCurrentIndex(1)
 
         self.label_stems_param = QLabel(self.tr("输出音轨"))
-        
+
         self.vBoxLayout_stems.addWidget(self.label_stems_param)
         self.vBoxLayout_stems.addWidget(self.comboBox_stems)
 
 
-class DemucsPageNavigation(NavigationBaseInterface):
+class BanditPageNavigation(NavigationBaseInterface):
     def __init__(self, parent=None):
-        super().__init__(title="Demucs", subtitle=self.tr("使用 Demucs4.0 模型的 AVS（自动人声分离）方案"), parent=parent)
-        # self.parent = parent
+        super().__init__(
+            title="BandIt Plus",
+            subtitle=self.tr("使用 BandIt Plus 分离对白、音乐和效果。首次运行会把官方权重下载到 ./cache/dnr-3s-mus64-l1snr-plus.ckpt"),
+            parent=parent,
+        )
 
         self.setupUI()
 
-        StyleSheet.DENUCE_INTERFACE.apply(self.demucs_param_widget)
+        StyleSheet.BANDIT_INTERFACE.apply(self.bandit_param_widget)
 
     def setupUI(self):
 
@@ -136,15 +137,12 @@ class DemucsPageNavigation(NavigationBaseInterface):
         self.fileListView = FileNameListView(self)
         self.addWidget(self.fileListView)
 
-        # =============================================================================
-        self.demucs_param_widget = DemucsParamGroupWidget(self)
-        self.addWidget(self.demucs_param_widget)
+        self.bandit_param_widget = BanditParamGroupWidget(self)
+        self.addWidget(self.bandit_param_widget)
 
-        # =============================================================================
         self.outputGroupWidget = OutputGroupWidget(self)
         self.addWidget(self.outputGroupWidget)
 
-        # =============================================================================
         self.process_button = PushButton()
         self.addWidget(self.process_button)
         self.process_button.setText(self.tr("提取"))
@@ -152,15 +150,14 @@ class DemucsPageNavigation(NavigationBaseInterface):
 
     def getParam(self) -> dict:
         param = {}
-        param["overlap"] = self.demucs_param_widget.spinBox_overlap.value()
-        param["segment"]= self.demucs_param_widget.spinBox_segment.value()
-        param["tracks"] = self.demucs_param_widget.comboBox_stems.currentIndex()
-
+        param["overlap"] = self.bandit_param_widget.spinBox_overlap.value()
+        param["segment"] = self.bandit_param_widget.spinBox_segment.value()
+        param["tracks"] = self.bandit_param_widget.comboBox_stems.currentIndex()
         return param
 
     def setParam(self, param: dict) -> None:
-
-        self.demucs_param_widget.spinBox_overlap.setValue(param["overlap"] )
-        self.demucs_param_widget.spinBox_segment.setValue(param["segment"])
-        self.demucs_param_widget.comboBox_stems.setCurrentIndex(param["tracks"])
-
+        self.bandit_param_widget.spinBox_overlap.setValue(param["overlap"])
+        self.bandit_param_widget.spinBox_segment.setValue(param["segment"])
+        self.bandit_param_widget.comboBox_stems.setCurrentIndex(
+            normalize_bandit_track_index(param.get("tracks", 1))
+        )
